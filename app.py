@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 import mysql.connector
 import os
 from dotenv import load_dotenv
+import logging
 load_dotenv()
 
 app = Flask(__name__)
@@ -29,17 +30,21 @@ def login():
     if request.method == "POST":
         email = request.form["email"]
         password = request.form["password"]
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary= True)
-        cursor.execute("select * from users where email = %s and password = %s", (email, password))
-        user = cursor.fetchone()
-        conn.close()
-        if user:
-            session["user_id"] = user["id"]
-            session["user_name"] = user["name"]
-            return redirect(url_for("welcome"))
-        else:
-            flash("Invalid email or password, please try again")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary= True)
+            cursor.execute("select * from users where email = %s and password = %s", (email, password))
+            user = cursor.fetchone()
+            conn.close()
+            if user:
+                session["user_id"] = user["id"]
+                session["user_name"] = user["name"]
+                return redirect(url_for("welcome"))
+            else:
+                flash("Invalid email or password, please try again")
+        except Exception as e:
+            logging.error("Error during login: %s", e)
+            flash("Something went wrong please try again later")
     return render_template("login.html")
 
 @app.route("/signup", methods = ["GET", "POST"])
@@ -49,24 +54,28 @@ def signup():
         email = request.form["email"]
         password = request.form["password"]
         phone = request.form["phone"]
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("select * from users where email = %s", (email,))
-        existing = cursor.fetchone()
-        if existing:
-            flash("Email already registred, please login")
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("select * from users where email = %s", (email,))
+            existing = cursor.fetchone()
+            if existing:
+                flash("Email already registred, please login")
+                conn.close()
+                return redirect(url_for("login"))
+            cursor.execute(
+                "insert into users (name, email, password, phone_number) values (%s, %s, %s, %s)", (name, email, password, phone)
+            )
+            conn.commit()
+            user_id = cursor.lastrowid
             conn.close()
-            return redirect(url_for("login"))
-        cursor.execute(
-            "insert into users (name, email, password, phone_number) values (%s, %s, %s, %s)", (name, email, password, phone)
-        )
-        conn.commit()
-        user_id = cursor.lastrowid
-        conn.close()
-        session["user_id"] = user_id
-        session["user_name"] = name
-        flash("Account created succesfully ")
-        return redirect(url_for("welcome"))
+            session["user_id"] = user_id
+            session["user_name"] = name
+            flash("Account created succesfully ")
+            return redirect(url_for("welcome"))
+        except Exception as e:
+            logging.error("Error during signup: %s", e)
+            flash("Something went wrong please try again later")
     return render_template("signup.html")
 
 @app.route("/welcome")
@@ -82,8 +91,50 @@ def logout():
 
 @app.route("/restaurants")
 def restaurants():
-    return "<h2>Restaurants Page</h2>"
- 
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary= True)
+        cursor.execute("select * from restaurants")
+        all_restaurants = cursor.fetchall()
+        conn.close()
+        return render_template("restaurants.html", restaurants = all_restaurants)
+    except Exception as e:
+        logging.error("Error fetching restaurants: %s", e)
+        flash("Something went wrong please try again later")
+        return redirect(url_for("welcome"))
+    
+@app.route("/reserve_restaurant/<int:restaurant_id>", methods = ["GET", "POST"])
+def reserve_restaurant(restaurant_id):
+    if request.method == "POST":
+        reservation_time = request.form["reservation_time"]
+        number_of_seats = request.form["number_of_seats"]
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO Reservations (user_id, restaurant_id, reservation_time, number_of_seats) VALUES (%s, %s, %s, %s)",
+                (session["user_id"], restaurant_id, reservation_time, number_of_seats)
+            )
+            conn.commit()
+            conn.close()
+            flash("Restaurant reservation created successfully")
+            return redirect(url_for("restaurants"))
+        except Exception as e:
+            logging.error("Error creating reservation: %s", e)
+            flash("Something went wrong. Please try again later.")
+            return redirect(url_for("restaurants"))
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary= True)
+        cursor.execute("select * from restaurants where id = %s", (restaurant_id,))
+        restaurant= cursor.fetchone()
+        conn.close()
+    except Exception as e:
+        logging.error("Error fetching restaurant: %s", e)
+        flash("Something went wrong please try again later")
+        return redirect(url_for("restaurants"))
+    return render_template("reserve_restaurant.html", restaurant = restaurant)
+        
 @app.route("/accommodation")
 def accommodation():
     return "<h2>Accommodation Page</h2>"
