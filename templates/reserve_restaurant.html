@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reserve Restaurant - {{ restaurant.name }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        form {
+            max-width: 400px;
+            margin: auto;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        label { display: block; margin-top: 10px; font-weight: bold; }
+        input { width: 100%; padding: 8px; margin-top: 5px; }
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <h1>Reserve Restaurant: {{ restaurant.name }}</h1>
+
+    <form method="POST">
+        <label for="reservation_time">Reservation Time</label>
+        <input type="datetime-local" name="reservation_time" required>
+
+        <label for="number_of_seats">Number of Seats</label>
+        <input type="number" name="number_of_seats" min="1" required>
+
+        <button type="submit">Confirm Restaurant Reservation</button>
+    </form>
+</body>
+</html>

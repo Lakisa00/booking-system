@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Restaurants</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        h1 { text-align: center; }
+        .restaurant {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin-top: 10px;
+            background: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+        .btn:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Available Restaurants</h1>
+
+    {% for r in restaurants %}
+        <div class="restaurant">
+            <h2>{{ r.name }}</h2>
+            <p><strong>Location:</strong> {{ r.location }}</p>
+            <p><strong>Cuisine:</strong> {{ r.cuisine }}</p>
+            <a href="{{ url_for('reserve_restaurant', restaurant_id=r.id) }}" class="btn">Reserve Restaurant</a>
+        </div>
+    {% endfor %}
+</body>
+</html>
