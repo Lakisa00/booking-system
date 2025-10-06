@@ -30,8 +30,8 @@
     {% for r in restaurants %}
         <div class="restaurant">
             <h2>{{ r.name }}</h2>
-            <p><strong>Location:</strong> {{ r.location }}</p>
-            <p><strong>Cuisine:</strong> {{ r.cuisine }}</p>
+            <p><strong>Location:</strong> {{ r.adress }}</p>
+            <p><strong>Cuisine:</strong> {{ r.type }}</p>
             <a href="{{ url_for('reserve_restaurant', restaurant_id=r.id) }}" class="btn">Reserve Restaurant</a>
         </div>
     {% endfor %}

@@ -142,6 +142,33 @@ def accommodation():
 @app.route("/flights")
 def flights():
     return "<h2>Flights Page</h2>"
-        
+
+@app.route("/accommodation_reservations")
+def my_accommodation_reservations():
+    return render_template("accommodation_reservations.html")
+
+@app.route("/flight_reservations")
+def my_flight_reservations():
+    return render_template("flight_reservations.html")
+
+@app.route("/my_restaurant_reservations")
+def my_restaurant_reservations():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("""
+            SELECT r.id, res.name AS restaurant_name, r.reservation_time, r.number_of_seats
+            FROM Reservations r
+            JOIN Restaurants res ON r.restaurant_id = res.id
+            WHERE r.user_id = %s
+        """, (session["user_id"],))
+        reservations = cursor.fetchall()
+        conn.close()
+        return render_template("my_restaurant_reservations.html", reservations = reservations)
+    except Exception as e:
+        logging.error("Error fetching restaurant reservation: %s", e)
+        flash("Something went wrong please try again later")
+        return redirect(url_for("welcome"))
+       
 if __name__ == "__main__":
     app.run(debug=True)
