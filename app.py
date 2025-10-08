@@ -137,7 +137,12 @@ def reserve_restaurant(restaurant_id):
         
 @app.route("/accommodation")
 def accommodation():
-    return "<h2>Accommodation Page</h2>"
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("select * from accommodations")
+    all_accommodations = cursor.fetchall()
+    conn.close()
+    return render_template("accommodation_reservation.html", accommodations = all_accommodations)
 
 @app.route("/flights")
 def flights():
@@ -167,8 +172,23 @@ def my_restaurant_reservations():
         return render_template("my_restaurant_reservations.html", reservations = reservations)
     except Exception as e:
         logging.error("Error fetching restaurant reservation: %s", e)
-        flash("Something went wrong please try again later")
+        flash("Something went wrong, please try again later")
         return redirect(url_for("welcome"))
-       
+    
+@app.route("/delete_restaurant_reservation/<int:reservation_id>", methods = ["POST"])
+def delete_restaurant_reservation(reservation_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("delete from reservations where id = %s and user_id = %s", (reservation_id, session["user_id"]))
+        conn.commit()
+        conn.close()
+        flash("Reservation deleted successfully")
+    except Exception as e:
+        logging.error("Error deleting restaurant reservation: %s", e)
+        flash("Something went wrong, please try again later.")
+    return redirect(url_for("my_restaurant_reservations"))
+
+
 if __name__ == "__main__":
     app.run(debug=True)
