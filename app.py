@@ -142,7 +142,7 @@ def accommodation():
     cursor.execute("select * from accommodations")
     all_accommodations = cursor.fetchall()
     conn.close()
-    return render_template("accommodation_reservation.html", accommodations = all_accommodations)
+    return render_template("accommodations.html", accommodations = all_accommodations)
 
 @app.route("/flights")
 def flights():
