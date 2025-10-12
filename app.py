@@ -138,7 +138,7 @@ def reserve_restaurant(restaurant_id):
 @app.route("/accommodation")
 def accommodation():
     conn = get_db_connection()
-    cursor = conn.cursor()
+    cursor = conn.cursor(dictionary= True)
     cursor.execute("select * from accommodations")
     all_accommodations = cursor.fetchall()
     conn.close()
