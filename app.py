@@ -146,7 +146,17 @@ def accommodation():
 
 @app.route("/flights")
 def flights():
-    return "<h2>Flights Page</h2>"
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("select * from flights")
+        all_flights = cursor.fetchall()
+        conn.close()
+        return render_template("flights.html", flights = all_flights)
+    except Exception as e:
+        logging.error('Error Fetching Flights: %s', e)
+        flash('Something went wrong please try again later')
+        return redirect(url_for("welcome"))
 
 @app.route("/accommodation_reservations")
 def my_accommodation_reservations():

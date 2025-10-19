@@ -1,2 +1,42 @@
-<h1 style="text-align:center;">My Flight Reservations</h1>
-<p style="text-align:center;">(Coming soon...)</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Available Flights</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Available Flights</h2>
+
+    <div class="row">
+        {% for f in flights %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm border-0 rounded-3">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">{{ f.origin }} → {{ f.destination }}</h5>
+                    <p class="card-text mb-2">
+                        <strong>Flight number:</strong> {{ f.flight_number }}<br>
+                        <strong>Plane model:</strong> {{ f.plane_model }}<br>
+                        <strong>Departure:</strong> {{ f.departure_time }}<br>
+                        <strong>Arrival:</strong> {{ f.arrival_time }}<br>
+                        <strong>Flight time:</strong> {{ f.flight_time }}<br>
+                        <strong>Gate:</strong> {{ f.gate }}
+                    </p>
+                    <p class="card-text mb-2">
+                        <strong>Seats:</strong> {{ f.occupied_number }}/{{ f.seat_number }} occupied<br>
+                        <strong>Price:</strong> €{{ "%.2f"|format(f.price) }}
+                    </p>
+                    <span class="badge {% if f.return_ticket %}bg-success{% else %}bg-info{% endif %}">
+                        {% if f.return_ticket %}Return{% else %}One-way{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>
