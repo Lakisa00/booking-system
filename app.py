@@ -160,10 +160,35 @@ def flights():
         flash('Something went wrong please try again later')
         return redirect(url_for("welcome"))
 
-@app.route("/accommodation_reservations")
+@app.route("/my_accommodation_reservations")
 def my_accommodation_reservations():
-    return render_template("accommodation_reservations.html")
-
+    if "user_id" not in session:
+        flash("You need to login to view your reservations", "warning")
+        return redirect(url_for("login"))
+    user_id = session["user_id"]
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    query = """
+    select 
+        o.id as reservation_id,
+        a.city as accommodation_name,
+        r.room_number,
+        r.room_type,
+        r.number_of_beds,
+        o.entry_date,
+        o.leave_date,
+        r.price_per_night
+    from occupied_rooms o 
+    join rooms r on o.room_id = r.id
+    join accommodations a on r.accommodation_id = a.id
+    where o.user_id = %s
+    order by o.entry_date desc
+    """
+    cursor.execute(query, (user_id,))
+    reservations = cursor.fetchall()
+    conn.close()
+    return render_template("my_accommodation_reservations.html", reservations = reservations)
+    
 @app.route("/flight_reservations")
 def my_flight_reservations():
     return render_template("flight_reservations.html")
@@ -232,6 +257,31 @@ def reserve_accommodation(accommodation_id):
             flash("No Available Rooms Match Your Selection")
     conn.close()
     return render_template("reserve_accommodation.html", options = available_options)
+
+@app.route("/delete_accommodation_reservation/<int:reservation_id>", methods = ["POST"])
+def delete_accommodation_reservation(reservation_id):
+    if "user_id" not in session:
+        flash("You need to login to cancel your reservations", "warning")
+        return redirect(url_for("login"))
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("select room_id from occupied_rooms where id = %s", (reservation_id,))
+        room = cursor.fetchone()
+        if room:
+            room_id = room[0]
+            cursor.execute("delete from occupied_rooms where id = %s", (reservation_id,))
+            cursor.execute("update rooms set occupied = 0 where id = %s", (room_id,))
+            conn.commit()
+            flash("Reservation successfully canceled", "success")
+        else:
+            flash("Reservation not found", "danger")
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        logging.error("Error cancelling reservation: %s", e)
+        flash("An error occurred while cancelling the reservation.", "danger")
+    return redirect(url_for("my_accommodation_reservations"))
 
 if __name__ == "__main__":
     app.run(debug=True)
