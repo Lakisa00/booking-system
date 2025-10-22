@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reserve Accommodation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body">
+            <h3 class="mb-4 text-center">Reserve Accommodation</h3>
+
+            {% with messages = get_flashed_messages() %}
+            {% if messages %}
+            <div class="alert alert-info">
+                {% for message in messages %}
+                    {{ message }}<br>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form method="POST" class="p-3">
+                <!-- Room type -->
+                <div class="mb-3">
+                    <label for="room_type" class="form-label">Room Type</label>
+                    <select name="room_type" id="room_type" class="form-select" required>
+                        <option value="" disabled selected>Select room type</option>
+                        {% for o in options %}
+                            <option value="{{ o.room_type }}">{{ o.room_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Number of beds -->
+                <div class="mb-3">
+                    <label for="number_of_beds" class="form-label">Number of Beds</label>
+                    <select name="number_of_beds" id="number_of_beds" class="form-select" required disabled>
+                        <option value="" disabled selected>Select number of beds</option>
+                        {% for o in options %}
+                            <option data-type="{{ o.room_type }}" value="{{ o.number_of_beds }}">{{ o.number_of_beds }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Entry date -->
+                <div class="mb-3">
+                    <label for="entry_date" class="form-label">Entry Date</label>
+                    <input type="date" id="entry_date" name="entry_date" class="form-control" required>
+                </div>
+
+                <!-- Leave date -->
+                <div class="mb-3">
+                    <label for="leave_date" class="form-label">Leave Date</label>
+                    <input type="date" id="leave_date" name="leave_date" class="form-control" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Confirm Reservation</button>
+                <a href="{{ url_for('accommodation') }}" class="btn btn-secondary w-100 mt-2">Back</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript logic -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const roomTypeSelect = document.getElementById('room_type');
+    const bedsSelect = document.getElementById('number_of_beds');
+    const entryDate = document.getElementById('entry_date');
+    const leaveDate = document.getElementById('leave_date');
+
+    // Initially disable number of beds
+    bedsSelect.disabled = true;
+
+    // Enable and filter number of beds based on selected room type
+    roomTypeSelect.addEventListener('change', function() {
+        const selectedType = this.value;
+        bedsSelect.disabled = false;
+
+        // Reset current options
+        for (const option of bedsSelect.options) {
+            if (!option.value) continue; // skip placeholder
+            option.hidden = option.getAttribute('data-type') !== selectedType;
+        }
+
+        // Reset selection
+        bedsSelect.value = '';
+    });
+
+    // Prevent leave date before entry date
+    entryDate.addEventListener('change', function() {
+        leaveDate.min = entryDate.value;  // set minimum leave date
+        if (leaveDate.value && leaveDate.value < entryDate.value) {
+            leaveDate.value = entryDate.value;
+        }
+    });
+});
+</script>
+
+</body>
+</html>
+message.txt
+5 KB

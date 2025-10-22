@@ -144,6 +144,8 @@ def accommodation():
     conn.close()
     return render_template("accommodations.html", accommodations = all_accommodations)
 
+
+
 @app.route("/flights")
 def flights():
     try:
@@ -199,6 +201,37 @@ def delete_restaurant_reservation(reservation_id):
         flash("Something went wrong, please try again later.")
     return redirect(url_for("my_restaurant_reservations"))
 
+@app.route("/reserve_accommodation/<int:accommodation_id>", methods = ["GET", "POST"])
+def reserve_accommodation(accommodation_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("select distinct room_type, number_of_beds from rooms where accommodation_id = %s and occupied = 0", (accommodation_id,))
+    available_options = cursor.fetchall()
+    if request.method == "POST":
+        room_type = request.form["room_type"]
+        number_of_beds = request.form["number_of_beds"]
+        entry_date = request.form["entry_date"]
+        leave_date = request.form["leave_date"]
+        user_id = session.get("user_id")
+        if not user_id:
+            flash("You must be logged in to reserve accommodation")
+            return redirect(url_for("login"))
+        cursor.execute("select id from rooms where accommodation_id = %s and room_type = %s and number_of_beds = %s and occupied = 0 order by price_per_night asc limit 1", (accommodation_id, room_type, number_of_beds,))
+        room = cursor.fetchone()
+        if room:
+            room_id = room["id"]
+            cursor.execute("""
+                INSERT INTO occupied_rooms (user_id, room_id, entry_date, leave_date)
+                VALUES (%s, %s, %s, %s)
+            """, (user_id, room_id, entry_date, leave_date))
+            cursor.execute("update rooms set occupied = 1 where id = %s", (room_id,))
+            conn.commit()
+            flash("Accommodation Reserved Successfully")
+            return redirect(url_for("accommodation"))
+        else:
+            flash("No Available Rooms Match Your Selection")
+    conn.close()
+    return render_template("reserve_accommodation.html", options = available_options)
 
 if __name__ == "__main__":
     app.run(debug=True)
