@@ -31,6 +31,10 @@
                     <span class="badge {% if f.return_ticket %}bg-success{% else %}bg-info{% endif %}">
                         {% if f.return_ticket %}Return{% else %}One-way{% endif %}
                     </span>
+                    <hr>
+                    <form method="GET" action="{{ url_for('reserve_flight', flight_id=f.id) }}">
+                        <button type="submit" class="btn btn-primary w-100">Reserve Flight</button>
+                    </form>
                 </div>
             </div>
         </div>

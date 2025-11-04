@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>My Flight Reservations</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container mt-5">
+  <h2 class="mb-4 text-center">My Flight Reservations</h2>
+
+  {% if reservations %}
+    <div class="row">
+      {% for r in reservations %}
+        <div class="col-md-6 mb-4">
+          <div class="card p-3 shadow-sm">
+            <h5>{{ r.origin }} → {{ r.destination }} ({{ r.flight_number }})</h5>
+            <p>
+              <strong>Departure:</strong> {{ r.departure_time }}<br>
+              <strong>Arrival:</strong> {{ r.arrival_time }}<br>
+              <strong>Seat:</strong> {{ r.seat_number or 'N/A' }}<br>
+              <strong>Price:</strong> €{{ "%.2f"|format(r.price) }}
+            </p>
+
+            <form method="POST" action="{{ url_for('delete_flight_reservation', reservation_id=r.reservation_id) }}" onsubmit="return confirm('Are you sure you want to cancel this reservation?');">
+              <button type="submit" class="btn btn-danger w-100">Cancel Reservation</button>
+            </form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info text-center">You have no flight reservations.</div>
+  {% endif %}
+</div>
+</body>
+</html>
