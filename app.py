@@ -117,8 +117,9 @@ def reserve_restaurant(restaurant_id):
             )
             conn.commit()
             conn.close()
-            flash("Restaurant reservation created successfully")
-            return redirect(url_for("restaurants"))
+            flash("Restaurant reservation created successfully", "success")
+            return redirect(url_for("welcome"))
+
         except Exception as e:
             logging.error("Error creating reservation: %s", e)
             flash("Something went wrong. Please try again later.")
@@ -247,8 +248,9 @@ def reserve_accommodation(accommodation_id):
             """, (user_id, room_id, entry_date, leave_date))
             cursor.execute("update rooms set occupied = 1 where id = %s", (room_id,))
             conn.commit()
-            flash("Accommodation Reserved Successfully")
-            return redirect(url_for("accommodation"))
+            flash("Accommodation Reserved Successfully", "success")
+            return redirect(url_for("welcome"))
+
         else:
             flash("No Available Rooms Match Your Selection")
     conn.close()
@@ -279,61 +281,90 @@ def delete_accommodation_reservation(reservation_id):
         flash("An error occurred while cancelling the reservation.", "danger")
     return redirect(url_for("my_accommodation_reservations"))
 
-@app.route("/reserve_flight/<int:flight_id>", methods = ["GET", "POST"])
+@app.route("/reserve_flight/<int:flight_id>", methods=["GET", "POST"])
 def reserve_flight(flight_id):
     if "user_id" not in session:
         flash("You must login to reserve a flight", "warning")
         return redirect(url_for("login"))
+
     user_id = session["user_id"]
     conn = get_db_connection()
     conn.autocommit = False
     cursor = conn.cursor(dictionary=True)
+
     try:
-        cursor.execute("select * from flights where id = %s", (flight_id,))
+        # --- Fetch the flight ---
+        cursor.execute("SELECT * FROM flights WHERE id = %s", (flight_id,))
         flight = cursor.fetchone()
         if not flight:
             flash("Flight not found", "danger")
             return redirect(url_for("flights"))
-        cursor.execute("select id, seat_number from seats where flight_id = %s and occupied = 0 order by seat_number", (flight_id,))
+
+        # --- Fetch available seats ---
+        cursor.execute("""
+            SELECT id, seat_number
+            FROM seats
+            WHERE flight_id = %s AND occupied = 0
+            ORDER BY seat_number
+        """, (flight_id,))
         available_seats = cursor.fetchall()
+
+        # --- Handle POST (reservation) ---
         if request.method == "POST":
             chosen_seat_id = request.form.get("seat_id")
-            cursor.execute("select id from tickets where user_id = %s and where flight_id = %s", (user_id, flight_id,))
-        if cursor.fetchone():
-            flash("You already reserved this flight.", "warning")
+
+            # Check if user already reserved THIS flight
+            cursor.execute(
+                "SELECT id FROM tickets WHERE user_id = %s AND flight_id = %s",
+                (user_id, flight_id)
+            )
+            if cursor.fetchone():
+                flash("You already reserved this flight.", "warning")
+                return redirect(url_for("my_flight_reservations"))
+
+            # Lock the seat
+            if chosen_seat_id:
+                cursor.execute(
+                    "SELECT id FROM seats WHERE id = %s AND flight_id = %s AND occupied = 0 FOR UPDATE",
+                    (chosen_seat_id, flight_id)
+                )
+            else:
+                cursor.execute(
+                    "SELECT id FROM seats WHERE flight_id = %s AND occupied = 0 ORDER BY id LIMIT 1 FOR UPDATE",
+                    (flight_id,)
+                )
+
+            seat_row = cursor.fetchone()
+            if not seat_row:
+                conn.rollback()
+                flash("No available seats for this flight (or selected seat was taken).", "danger")
+                return redirect(url_for("flights"))
+
+            seat_id = seat_row["id"]
+            # Insert the new ticket for THIS flight only
+            cursor.execute(
+                "INSERT INTO tickets (user_id, flight_id, seat_id) VALUES (%s, %s, %s)",
+                (user_id, flight_id, seat_id)
+            )
+
+            # Update seat & flight occupancy
+            cursor.execute("UPDATE seats SET occupied = 1 WHERE id = %s", (seat_id,))
+            cursor.execute("UPDATE flights SET occupied_number = occupied_number + 1 WHERE id = %s", (flight_id,))
+
+            conn.commit()
+            flash("Flight reserved successfully!", "success")
             return redirect(url_for("my_flight_reservations"))
-        if chosen_seat_id:
-            cursor.execute(
-                "SELECT id FROM seats WHERE id = %s AND flight_id = %s AND occupied = 0 FOR UPDATE",
-                (chosen_seat_id, flight_id)
-            )
-        else:
-            cursor.execute(
-                "SELECT id FROM seats WHERE flight_id = %s AND occupied = 0 ORDER BY id LIMIT 1 FOR UPDATE",
-                (flight_id,)
-            )
-        seat_row = cursor.fetchone()
-        if not seat_row:
-            conn.rollback()
-            flash("No available seats for this flight (or selected seat was taken).", "danger")
-            return redirect(url_for("flights"))
-        seat_id = seat_row["id"]
-        cursor.execute(
-            "INSERT INTO tickets (user_id, flight_id, seat_id) VALUES (%s, %s, %s)",
-            (user_id, flight_id, seat_id)
-        )
-        cursor.execute("UPDATE seats SET occupied = 1 WHERE id = %s", (seat_id,))
-        cursor.execute("UPDATE flights SET occupied_number = occupied_number + 1 WHERE id = %s", (flight_id,))
-        conn.commit()
-        flash("Flight reserved successfully!", "success")
-        return redirect(url_for("my_flight_reservations"))
+
     except Exception as e:
         conn.rollback()
-        flash("Error during reservation", "danger")
+        flash(f"Error during reservation: {e}", "danger")
+
     finally:
         cursor.close()
         conn.close()
-    return render_template("reserve_flight.html", flight = flight, available_seats = available_seats)
+
+    return render_template("reserve_flight.html", flight=flight, available_seats=available_seats)
+
 
 @app.route("/my_flight_reservations")
 def my_flight_reservations():
@@ -343,23 +374,27 @@ def my_flight_reservations():
     user_id = session["user_id"]
     try:
         conn = get_db_connection()
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("""
-        select
-        t.id as reservation_id,
-        f.id as flight_id,
-        f.flight_number,
-        f.plane_model,
-        f.departure_time,
-        f.arrival_time,
-        f.flight_time,
-        f.origin,
-        f.destination,
-        f.gate,
-        f.price,
-        f.return_ticket,
-        s.seat_number from tickets t join flights f on t.flight_id
-        left join seats s on t.seat_id = s.id where t.user_id = %s order by f.departure_time desc
+            SELECT
+                t.id AS reservation_id,
+                f.id AS flight_id,
+                f.flight_number,
+                f.plane_model,
+                f.departure_time,
+                f.arrival_time,
+                f.flight_time,
+                f.origin,
+                f.destination,
+                f.gate,
+                f.price,
+                f.return_ticket,
+                s.seat_number
+            FROM tickets t
+            JOIN flights f ON t.flight_id = f.id
+            LEFT JOIN seats s ON t.seat_id = s.id
+            WHERE t.user_id = %s
+            ORDER BY f.departure_time DESC
         """, (user_id,))
         reservations = cursor.fetchall()
         cursor.close()

@@ -4,22 +4,62 @@
   <meta charset="utf-8">
   <title>My Flight Reservations</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+        background-color: #f7f9fc;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .container {
+        margin-top: 60px;
+    }
+    h2 {
+        font-weight: bold;
+        color: #343a40;
+    }
+    .card-flight {
+        border-radius: 12px;
+        transition: transform 0.2s;
+    }
+    .card-flight:hover {
+        transform: translateY(-5px);
+    }
+    .flash-container {
+        margin-bottom: 20px;
+    }
+  </style>
 </head>
-<body class="bg-light">
-<div class="container mt-5">
-  <h2 class="mb-4 text-center">My Flight Reservations</h2>
+<body>
+
+<div class="container">
+
+  <h2 class="text-center mb-4">My Flight Reservations</h2>
+
+  <!-- Flash messages -->
+  <div class="flash-container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+              {% for category, message in messages %}
+                  <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
+                      {{ message }}
+                      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                  </div>
+              {% endfor %}
+          {% endif %}
+      {% endwith %}
+  </div>
 
   {% if reservations %}
     <div class="row">
       {% for r in reservations %}
         <div class="col-md-6 mb-4">
-          <div class="card p-3 shadow-sm">
-            <h5>{{ r.origin }} → {{ r.destination }} ({{ r.flight_number }})</h5>
-            <p>
+          <div class="card p-3 shadow-sm card-flight">
+            <h5 class="text-primary">{{ r.origin }} → {{ r.destination }} ({{ r.flight_number }})</h5>
+            <p class="mb-2">
               <strong>Departure:</strong> {{ r.departure_time }}<br>
               <strong>Arrival:</strong> {{ r.arrival_time }}<br>
               <strong>Seat:</strong> {{ r.seat_number or 'N/A' }}<br>
-              <strong>Price:</strong> €{{ "%.2f"|format(r.price) }}
+              <strong>Price:</strong> €{{ "%.2f"|format(r.price) }}<br>
+              {% if r.return_ticket %}<span class="badge bg-success">Return</span>{% else %}<span class="badge bg-info">One-way</span>{% endif %}
             </p>
 
             <form method="POST" action="{{ url_for('delete_flight_reservation', reservation_id=r.reservation_id) }}" onsubmit="return confirm('Are you sure you want to cancel this reservation?');">
@@ -30,8 +70,13 @@
       {% endfor %}
     </div>
   {% else %}
-    <div class="alert alert-info text-center">You have no flight reservations.</div>
+    <div class="alert alert-info text-center">
+        You have no flight reservations.
+    </div>
   {% endif %}
+
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

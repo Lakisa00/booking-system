@@ -4,23 +4,43 @@
     <meta charset="UTF-8">
     <title>Reserve Accommodation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f7f9fc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            margin-top: 60px;
+            max-width: 600px;
+        }
+        h3 {
+            font-weight: bold;
+            color: #343a40;
+        }
+        .flash-container {
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
-<body class="bg-light">
-
-<div class="container mt-5">
+<body>
+<div class="container">
     <div class="card shadow-sm border-0 rounded-3">
         <div class="card-body">
             <h3 class="mb-4 text-center">Reserve Accommodation</h3>
 
-            {% with messages = get_flashed_messages() %}
-            {% if messages %}
-            <div class="alert alert-info">
-                {% for message in messages %}
-                    {{ message }}<br>
-                {% endfor %}
+            <!-- Flash messages -->
+            <div class="flash-container">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category if category else 'info' }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
             </div>
-            {% endif %}
-            {% endwith %}
 
             <form method="POST" class="p-3">
                 <!-- Room type -->
@@ -72,27 +92,25 @@ document.addEventListener('DOMContentLoaded', function() {
     const entryDate = document.getElementById('entry_date');
     const leaveDate = document.getElementById('leave_date');
 
-    // Initially disable number of beds
+    // Disable beds initially
     bedsSelect.disabled = true;
 
-    // Enable and filter number of beds based on selected room type
+    // Filter beds based on selected room type
     roomTypeSelect.addEventListener('change', function() {
         const selectedType = this.value;
         bedsSelect.disabled = false;
 
-        // Reset current options
         for (const option of bedsSelect.options) {
-            if (!option.value) continue; // skip placeholder
+            if (!option.value) continue;
             option.hidden = option.getAttribute('data-type') !== selectedType;
         }
 
-        // Reset selection
         bedsSelect.value = '';
     });
 
     // Prevent leave date before entry date
     entryDate.addEventListener('change', function() {
-        leaveDate.min = entryDate.value;  // set minimum leave date
+        leaveDate.min = entryDate.value;
         if (leaveDate.value && leaveDate.value < entryDate.value) {
             leaveDate.value = entryDate.value;
         }
@@ -100,7 +118,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-message.txt
-5 KB
